@@ -7,9 +7,22 @@ import hashlib
 import os  # Importe o módulo os para usar os.urandom(32)
 from tkinter import Scrollbar
 
+
 # Database connection
 conn = sqlite3.connect('inventario.db')
 c = conn.cursor()
+conn = sqlite3.connect('users.db')
+c = conn.cursor()
+
+
+# Users table
+c.execute("""
+    CREATE TABLE IF NOT EXISTS users  
+    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+     username TEXT UNIQUE,
+     password_hash TEXT)
+""")
+
 
 # Inventory table
 c.execute("""
@@ -39,6 +52,71 @@ c.execute("""
 """)
 
 conn.commit()
+
+# Add default users if they don't exist
+users = [
+    ("Denilson", "123456789"),
+    ("Victor", "123456789"),
+    ("Felipe", "123456789")
+]
+
+for user in users:
+    username = user[0]
+    password = user[1]
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    c.execute("INSERT OR IGNORE INTO users (username, password_hash) VALUES (?, ?)", (username, password_hash))
+
+conn.commit()
+
+class LoginSystem:
+    def __init__(self):
+        # Create the login window
+        self.login_window = tk.Tk()
+        self.login_window.title('Login')
+        self.login_window.geometry('450x250')
+
+
+
+        self.username_label = tk.Label(self.login_window, text='USUARIO:', fg='white', bg='Black', font=('Arial', 15))
+        self.login_window.configure(bg='black')  # Cor de fundo para a janela principal
+        self.username_label.pack(pady=8)
+        self.username_entry = tk.Entry(self.login_window, width=30,font=('Arial', 13))
+        self.username_entry.pack()
+
+        self.password_label = tk.Label(self.login_window, text='SENHA:', fg='white', bg='Black', font=('Arial',15))
+        self.password_label.pack(pady=14)
+        self.password_entry = tk.Entry(self.login_window, show='*', width=30,font=('Arial', 13))
+        self.password_entry.pack()
+
+        self.login_button = tk.Button(self.login_window, text='ENTRAR', command=self.login, font=('Arial bold', 9), width=14, height=2, bg='black', fg='white', bd=5)
+        self.login_button.pack(pady=14)
+
+    def login(self):
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+
+        # Hash the entered password
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+        c.execute("SELECT * FROM users WHERE username=? AND password_hash=?", (username, password_hash))
+        user = c.fetchone()
+
+        if user:
+            # Prompt for additional confirmation
+            confirm_login = messagebox.askyesno('Confirm Login', 'Você deseja ingressar no Controle de Inventario?')
+            if confirm_login:
+                self.logged_in = True  # Set login status to True
+                self.login_window.destroy()
+        else:
+            messagebox.showerror('Login Failed', 'Usuario ou Senha incorreto!!')
+            self.username_entry.delete(0, tk.END)
+            self.password_entry.delete(0, tk.END)
+
+    def run(self):
+        self.login_window.mainloop()
+        if not self.logged_in:
+            self.login_window.quit()  # If not logged in, quit the entire application
+
 
 class InventorySystem:
 
@@ -576,9 +654,18 @@ class InventorySystem:
 
 
     def run(self):
-        self.root.mainloop()
+        if login_system.logged_in:  # Check if logged in before running the inventory system
+            self.root.mainloop()
+        else:
+            self.root.destroy()  # Destroy the inventory system if not logged in
 
 
-# Criar GUI
-inventory_system = InventorySystem()
-inventory_system.run()
+
+# Run the login system
+login_system = LoginSystem()
+login_system.run()
+
+# Create GUI if logged in successfully
+if login_system.logged_in:
+    inventory_system = InventorySystem()
+    inventory_system.run()
