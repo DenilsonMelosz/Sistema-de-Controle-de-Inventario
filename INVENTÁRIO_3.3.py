@@ -91,6 +91,67 @@ class LoginSystem:
         self.login_button = tk.Button(self.login_window, text='ENTRAR', command=self.login, font=('Arial bold', 9), width=14, height=2, bg='black', fg='white', bd=5)
         self.login_button.pack(pady=14)
 
+        self.forgot_password_button = tk.Button(self.login_window, text='Esqueceu a Senha?', command=self.change_password, font=('Arial bold', 10), width=14, height=1, bg='black', fg='white', bd=2)
+        self.forgot_password_button.pack(pady=1)
+
+    def change_password(self):
+        # Create a new window for changing password
+        self.change_password_window = tk.Toplevel(self.login_window)
+        self.change_password_window.title('Alterar Senha')
+        self.change_password_window.geometry('300x200')
+
+        # Labels and entries for username, security password, and new password
+        self.username_label_change = tk.Label(self.change_password_window, text='Login:')
+        self.username_label_change.pack()
+        self.username_entry_change = tk.Entry(self.change_password_window)
+        self.username_entry_change.pack()
+
+        self.security_password_label = tk.Label(self.change_password_window, text='Senha de Segurança:')
+        self.security_password_label.pack()
+        self.security_password_entry = tk.Entry(self.change_password_window, show='*')
+        self.security_password_entry.pack()
+
+        self.new_password_label = tk.Label(self.change_password_window, text='Nova Senha:')
+        self.new_password_label.pack()
+        self.new_password_entry = tk.Entry(self.change_password_window, show='*')
+        self.new_password_entry.pack()
+
+        self.change_password_button = tk.Button(self.change_password_window, text='Alterar Senha',
+                                                command=self.validate_change_password)
+        self.change_password_button.pack()
+
+    def validate_change_password(self):
+        username = self.username_entry_change.get()
+        security_password = self.security_password_entry.get()
+        new_password = self.new_password_entry.get()
+
+        # Check if the security password matches the required security password 'ctd2024admin'
+        if security_password != 'ctd2024admin':
+            messagebox.showerror('Erro', 'Senha de Segurança Inválida')
+            return
+
+        # Hash the new password
+        new_password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+
+        # Check if the user exists in the database
+        c.execute("SELECT * FROM users WHERE username=?", (username,))
+        user = c.fetchone()
+
+        if user:
+            # Update the password for the given user
+            c.execute("UPDATE users SET password_hash=? WHERE username=?", (new_password_hash, username))
+            conn.commit()
+            messagebox.showinfo('Sucesso', 'Senha alterada com sucesso')
+            self.change_password_window.destroy()
+        else:
+            messagebox.showerror('Erro', 'Usuário não existe')
+
+            # Clear the entries after changing the password
+            self.username_entry_change.delete(0, tk.END)
+            self.security_password_entry.delete(0, tk.END)
+            self.new_password_entry.delete(0, tk.END)
+
+
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
@@ -102,8 +163,8 @@ class LoginSystem:
         user = c.fetchone()
 
         if user:
-            # Prompt for additional confirmation
-            confirm_login = messagebox.askyesno('Confirm Login', 'Você deseja ingressar no Controle de Inventario?')
+            # Prompt de validação de confirmação de Login
+            confirm_login = messagebox.askyesno('Confirme o Login', 'Você deseja ingressar no Controle de Inventario?')
             if confirm_login:
                 self.logged_in = True  # Set login status to True
                 self.login_window.destroy()
