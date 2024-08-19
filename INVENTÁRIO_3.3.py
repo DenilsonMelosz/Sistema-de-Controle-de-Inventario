@@ -55,9 +55,9 @@ conn.commit()
 
 # Add default users if they don't exist
 users = [
-    ("Denilson", "123456789"),
-    ("Victor", "123456789"),
-    ("Felipe", "123456789")
+    ("usuario1", "123456789"),
+    ("usuario2", "123456789"),
+    ("usuario3", "123456789")
 ]
 
 for user in users:
